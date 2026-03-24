@@ -1,0 +1,56 @@
+<div class="thread {% if message.parent %}thread--nested{% endif %}" id="message-{{ message.id }}">
+  <div class="thread__top">
+    <div class="thread__author">
+      <a href="{% url 'user-profile' message.user.id %}" class="thread__authorInfo">
+        <div class="avatar avatar--small">
+          <img src="{{ message.user.avatar.url }}" />
+        </div>
+        <span>@{{ message.user.username }}</span>
+      </a>
+      <span class="thread__date">{{ message.created|timesince }} ago</span>
+    </div>
+
+    <div class="thread__actions">
+      <form method="post" action="{% url 'vote-message' message.id 'upvote' %}" style="display:inline">
+        {% csrf_token %}
+        <button class="btn btn--icon" type="submit">▲</button>
+      </form>
+      <span class="thread__score">{{ message.score }}</span>
+      <form method="post" action="{% url 'vote-message' message.id 'downvote' %}" style="display:inline">
+        {% csrf_token %}
+        <button class="btn btn--icon" type="submit">▼</button>
+      </form>
+      <button class="btn btn--link" type="button" onclick="this.closest('.thread').querySelector('.thread__reply').classList.toggle('visible')">Reply</button>
+      <a class="btn btn--link" href="#message-{{ message.id }}">Share</a>
+      {% if request.user == message.user %}
+      <a class="btn btn--link" href="{% url 'update-message' message.id %}">Edit</a>
+      {% endif %}
+    </div>
+
+    {% if request.user == message.user %}
+    <a href="{% url 'delete-message' message.id %}">
+      <div class="thread__delete">
+        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+          <title>remove</title>
+          <path d="M27.314 6.019l-1.333-1.333-9.98 9.981-9.981-9.981-1.333 1.333 9.981 9.981-9.981 9.98 1.333 1.333 9.981-9.98 9.98 9.98 1.333-1.333-9.98-9.98 9.98-9.981z"></path>
+        </svg>
+      </div>
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="thread__details">{{ message.body }}</div>
+
+  <div class="thread__reply{% if message.parent %} thread__reply--nested{% endif %}">
+    <form action="" method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="reply_to" value="{{ message.id }}" />
+      <input name="body" placeholder="Reply to this {{ message.parent|yesno:'reply,message' }}..." />
+      <button class="btn btn--main" type="submit">Reply</button>
+    </form>
+  </div>
+
+  {% for reply in message.replies.all %}
+    {% include 'base/thread_item.html' with message=reply %}
+  {% endfor %}
+</div>

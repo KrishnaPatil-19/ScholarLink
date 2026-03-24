@@ -1,0 +1,42 @@
+{% extends 'main.html' %}
+{% load i18n %}
+
+{% block content %}
+<main class="auth layout">
+  <div class="container">
+    <div class="layout__box auth__box auth__box--wide">
+      <div class="layout__boxHeader">
+        <div class="layout__boxTitle">
+          <h3>{% trans "Complete Sign Up" %}</h3>
+        </div>
+      </div>
+      <div class="layout__body">
+        <h2 class="auth__tagline">Finish setting up your ScholarLink account</h2>
+        <p class="auth__description">{% blocktrans with provider_name=account.get_provider.name site_name=site.name %}You are using your {{ provider_name }} account to sign in to {{ site_name }}. Please complete the details below to continue.{% endblocktrans %}</p>
+
+        {% url 'socialaccount_signup' as action_url %}
+        <form class="form" method="post" action="{{ action_url }}">
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+            <div class="form__errorlist">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          {% for field in form %}
+            <div class="form__group">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}
+                <div class="form__errorlist">{{ field.errors }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+
+          {{ redirect_field }}
+
+          <button class="btn btn--main auth__submit" type="submit">{% trans "Sign Up" %}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock content %}

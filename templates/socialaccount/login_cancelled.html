@@ -1,0 +1,24 @@
+{% extends 'main.html' %}
+{% load i18n %}
+
+{% block content %}
+<main class="auth layout">
+  <div class="container">
+    <div class="layout__box auth__box auth__box--compact">
+      <div class="layout__boxHeader">
+        <div class="layout__boxTitle">
+          <h3>{% trans "Login Cancelled" %}</h3>
+        </div>
+      </div>
+      <div class="layout__body">
+        <h2 class="auth__tagline">Your Google sign-in was cancelled</h2>
+        <p class="auth__description">{% trans "If that was unintentional, you can try again from the login page." %}</p>
+
+        <div class="auth__action auth__action--stack">
+          <a href="{% url 'login' %}" class="btn btn--main auth__submit">Return to Login</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock content %}
