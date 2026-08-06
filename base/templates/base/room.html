@@ -79,13 +79,28 @@
         </div>
       </div>
       <div class="room__message">
-        <form action="" method="POST">
+        <form action="" method="POST" data-login-action="post a message">
           {% csrf_token %}
           <input name="body" placeholder="Write your message here..." />
           <button class="btn btn--main room__messageButton" type="submit">Post</button>
         </form>
       </div>
     </div>
+
+    {% if flagged_message %}
+    <div class="modal-overlay active" id="flagged-modal" aria-hidden="false">
+      <div class="modal modal--small">
+        <button class="modal__close" type="button" aria-label="Close">&times;</button>
+        <span class="modal__icon">⚠️</span>
+        <h2 class="modal__title">Message Flagged</h2>
+        <p class="modal__text">Your last message was flagged and removed because it did not match the room topic.</p>
+        <pre class="modal__message" id="flagged-message-text">{{ flagged_message }}</pre>
+        <div class="modal__actions">
+          <button class="btn btn--main modal__close" type="button">Okay</button>
+        </div>
+      </div>
+    </div>
+    {% endif %}
     <!-- Room End -->
 
     <!-- Participants Start -->
@@ -108,5 +123,4 @@
     <!-- Participants End -->
   </div>
 </main>
-<script src="script.js"></script>
 {% endblock content %}

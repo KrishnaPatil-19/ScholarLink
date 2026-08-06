@@ -10,7 +10,7 @@
     <title>ScholarLink - Find study partners around the world!</title>
   </head>
 
-  <body>
+  <body data-authenticated="{% if request.user.is_authenticated %}true{% else %}false{% endif %}" data-login-action="{{ login_required_action|default:'' }}">
 
         {% include 'navbar.html' %}
 
@@ -21,6 +21,18 @@
             {% endfor %}
         </ul>
         {% endif %}
+
+        <div class="modal-overlay" id="login-modal" aria-hidden="true">
+          <div class="modal modal--small">
+            <button class="modal__close" type="button" aria-label="Close">&times;</button>
+            <span class="modal__icon">🔒</span>
+            <h2 class="modal__title">Login Required</h2>
+            <p class="modal__text" id="login-modal-text">You need to be logged in to perform this action.</p>
+            <div class="modal__actions">
+              <a class="btn btn--main" id="login-modal-button" href="{% url 'login' %}?next={{ request.path }}">Login</a>
+            </div>
+          </div>
+        </div>
 
         {% block content %}
 

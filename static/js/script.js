@@ -68,5 +68,56 @@ if (photoInput)
 const conversationThread = document.querySelector(".room__box");
 if (conversationThread) conversationThread.scrollTop = conversationThread.scrollHeight;
 
+const loginModal = document.getElementById('login-modal');
+const flaggedModal = document.getElementById('flagged-modal');
+const loginModalText = document.getElementById('login-modal-text');
+const loginModalButton = document.getElementById('login-modal-button');
+const modalCloseButtons = document.querySelectorAll('.modal__close');
+
+const showModal = (modal) => {
+  if (!modal) return;
+  modal.classList.add('active');
+  modal.setAttribute('aria-hidden', 'false');
+};
+
+const hideModal = (modal) => {
+  if (!modal) return;
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden', 'true');
+};
+
+modalCloseButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const overlay = button.closest('.modal-overlay');
+    if (overlay) hideModal(overlay);
+  });
+});
+
+window.addEventListener('click', (event) => {
+  if (event.target.classList.contains('modal-overlay')) {
+    hideModal(event.target);
+  }
+});
+
+const loginForms = document.querySelectorAll('form[data-login-action]');
+loginForms.forEach((form) => {
+  form.addEventListener('submit', (event) => {
+    const auth = document.body.dataset.authenticated === 'true';
+    if (!auth) {
+      event.preventDefault();
+      const action = form.dataset.loginAction || 'perform this action';
+      if (loginModalText) loginModalText.textContent = `You need to be logged in to ${action}!`;
+      if (loginModal) showModal(loginModal);
+    }
+  });
+});
+
+if (flaggedModal) {
+  const flaggedMessageText = document.getElementById('flagged-message-text');
+  if (flaggedMessageText && flaggedMessageText.textContent.trim()) {
+    showModal(flaggedModal);
+  }
+}
+
 
 

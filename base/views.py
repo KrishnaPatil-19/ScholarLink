@@ -4,11 +4,48 @@ from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.urls import reverse
 from django.contrib.auth import authenticate, login, logout
-from .models import Room, Topic, Message, User
+from .models import Room, Topic, Message, User, Hub
 from .forms import RoomForm, UserForm, MyUserCreationForm
 
 EMAIL_REGEX = r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
+
+TOPIC_SYNONYMS = {
+    'python': {'django', 'flask', 'numpy', 'pandas', 'python3', 'programming', 'code'},
+    'data': {'analytics', 'statistics', 'dataset', 'datasets', 'ml', 'ai', 'machine', 'learning'},
+    'machine': {'learning', 'ai', 'ml', 'neural', 'model', 'models'},
+    'learning': {'machine', 'ai', 'ml', 'training', 'models'},
+    'web': {'frontend', 'backend', 'html', 'css', 'javascript', 'js', 'react', 'node'},
+    'django': {'python', 'web', 'backend', 'rest'},
+    'java': {'spring', 'hibernate', 'jvm', 'kotlin'},
+    'js': {'javascript', 'react', 'node', 'vue', 'angular'},
+    'math': {'algebra', 'calculus', 'geometry', 'statistics'},
+    'science': {'physics', 'chemistry', 'biology', 'research'},
+}
+
+
+def _normalize_words(text):
+    return set(re.findall(r"\w+", text.lower()))
+
+
+def is_message_on_topic(body, topic_name):
+    if not body:
+        return False
+    if not topic_name:
+        return True
+
+    body_words = _normalize_words(body)
+    topic_words = _normalize_words(topic_name)
+
+    if body_words & topic_words:
+        return True
+
+    for token in topic_words:
+        if token in TOPIC_SYNONYMS and body_words & TOPIC_SYNONYMS[token]:
+            return True
+
+    return False
 
 # rooms = [
 #     {'id': 1, 'name': 'Room 1'},
@@ -99,33 +136,59 @@ def home(request):
     )
 
     topics = Topic.objects.all()[0:5]
+    active_spaces = Hub.objects.all()[0:6]
     room_count = rooms.count()
-    room_messages = Message.objects.filter(Q(room__topic__name__icontains=q))[0:3]
+    room_messages = Message.objects.filter(Q(room__topic__name__icontains=q), is_removed=False)[0:3]
 
-    context = {'rooms': rooms, 'topics':topics, 'room_count': room_count, 'room_messages': room_messages}
+    context = {
+        'rooms': rooms,
+        'topics': topics,
+        'active_spaces': active_spaces,
+        'room_count': room_count,
+        'room_messages': room_messages,
+    }
     return render(request, 'base/home.html', context)
 
 def room(request, pk):
     room = Room.objects.get(id=pk)
-    room_messages = room.message_set.filter(parent__isnull=True)
+    room_messages = room.message_set.filter(parent__isnull=True, is_removed=False)
     participants = room.participants.all()
+    flagged_message = request.session.pop('flagged_message', '')
 
     if request.method == 'POST':
-        body = request.POST.get('body')
+        if not request.user.is_authenticated:
+            return redirect(f"{reverse('login')}?next={request.path}")
+
+        body = request.POST.get('body', '').strip()
         reply_to = request.POST.get('reply_to')
 
         if body:
             parent = Message.objects.get(id=reply_to) if reply_to else None
+            is_flagged = not is_message_on_topic(body, room.topic.name if room.topic else '')
             message = Message.objects.create(
                 user=request.user,
                 room=room,
                 body=body,
-                parent=parent
+                parent=parent,
+                is_flagged=is_flagged,
+                is_removed=is_flagged,
+                flag_reason='Off-topic: does not match room topic' if is_flagged else ''
             )
-            room.participants.add(request.user)
+
+            if is_flagged:
+                request.session['flagged_message'] = body[:250]
+                messages.warning(request, 'Your message was flagged and removed because it is off-topic for this room topic.')
+            else:
+                room.participants.add(request.user)
+
             return redirect('room', pk=room.id)
 
-    context = {'room': room, 'room_messages': room_messages, 'participants': participants}
+    context = {
+        'room': room,
+        'room_messages': room_messages,
+        'participants': participants,
+        'flagged_message': flagged_message,
+    }
     return render(request, 'base/room.html', context)
 
 @login_required(login_url='login')
@@ -154,41 +217,55 @@ def userProfile(request, pk):
     return render(request, 'base/profile.html', context)
 
 @login_required(login_url='login')
+@login_required(login_url='login')
 def createRoom(request):
     form = RoomForm()
     topics = Topic.objects.all()
+    spaces = Hub.objects.all()
     if request.method == 'POST':
         topic_name = request.POST.get('topic')
+        hub_name = request.POST.get('space')
         topic, created = Topic.objects.get_or_create(name=topic_name)
+        hub = None
+        if hub_name:
+            hub, created = Hub.objects.get_or_create(name=hub_name)
         Room.objects.create(
             host=request.user,
             topic=topic,
+            hub=hub,
             name=request.POST.get('name'),
             description=request.POST.get('description'),
         )
         return redirect('home')
-    context = {'form':form, 'topics':topics}
+    context = {'form': form, 'topics': topics, 'spaces': spaces}
     return render(request, 'base/room_form.html', context)
 
+@login_required(login_url='login')
 @login_required(login_url='login')
 def updateRoom(request, pk):
     room = Room.objects.get(id=pk)
     form = RoomForm(instance=room)
     topics = Topic.objects.all()
+    spaces = Hub.objects.all()
     if request.user != room.host:
         return HttpResponse('You are not allowed here!')
 
     if request.method == 'POST':
         topic_name = request.POST.get('topic')
+        hub_name = request.POST.get('space')
         topic, created = Topic.objects.get_or_create(name=topic_name)
+        hub = None
+        if hub_name:
+            hub, created = Hub.objects.get_or_create(name=hub_name)
         room.name = request.POST.get('name')
         room.topic = topic
+        room.hub = hub
         room.description = request.POST.get('description')
         room.save()
 
         return redirect('home')
 
-    context = {'form': form, 'topics': topics, 'room': room}
+    context = {'form': form, 'topics': topics, 'spaces': spaces, 'room': room}
     return render(request, 'base/room_form.html', context)
 
 @login_required(login_url='login')
@@ -213,12 +290,19 @@ def updateMessage(request, pk):
     if request.method == 'POST':
         body = request.POST.get('body', '').strip()
         if body:
-            message.body = body
-            message.save()
-            messages.success(request, 'Message updated successfully.')
-            return redirect('room', pk=message.room.id)
+            if not is_message_on_topic(body, message.room.topic.name if message.room.topic else ''):
+                messages.error(request, 'Message update blocked because it is off-topic for this room topic.')
+            else:
+                message.body = body
+                message.is_flagged = False
+                message.is_removed = False
+                message.flag_reason = ''
+                message.save()
+                messages.success(request, 'Message updated successfully.')
+                return redirect('room', pk=message.room.id)
 
-        messages.error(request, 'Message cannot be empty.')
+        else:
+            messages.error(request, 'Message cannot be empty.')
 
     return render(request, 'base/message_form.html', {'message': message})
 
@@ -260,5 +344,5 @@ def topicsPage(request):
     return render(request, 'base/topics.html', {'topics': topics})
 
 def activityPage(request):
-    room_messages = Message.objects.all()
+    room_messages = Message.objects.filter(is_removed=False)
     return render(request, 'base/activity.html', {'room_messages': room_messages})

@@ -4,13 +4,35 @@
 <main class="layout layout--3">
   <div class="container">
 
-    <!-- Topics Start -->
-     {% include 'base/topics_component.html' %}
+    <aside class="sidebar">
+      <section class="sidebar__card sidebar__card--space">
+        <div class="sidebar__header">
+          <h2>Spaces</h2>
+        </div>
+        <div class="sidebar__body">
+          <ul class="spaces__list">
+            {% for space in active_spaces %}
+            <li>
+              <a href="{% url 'home' %}?q={{ space.name }}">{{ space.name }} <span>{{ space.followers.count }}</span></a>
+            </li>
+            {% empty %}
+            <li>No spaces yet. Create one when you make a room.</li>
+            {% endfor %}
+          </ul>
+          <a class="btn btn--link" href="{% url 'create-room' %}">
+            Start a Space
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+              <title>chevron-down</title>
+              <path d="M16 21l-13-13h-3l16 16 16-16h-3l-13 13z"></path>
+            </svg>
+          </a>
+        </div>
+      </section>
 
-        <!-- Topics End -->
+      {% include 'base/topics_component.html' %}
+    </aside>
 
-        <!-- Room List Start -->
-        <div class="roomList">
+    <div class="roomList">
           <div class="mobile-menu">
             <form class="header__search" action="{% url 'home' %}" method="GET">
               <label>

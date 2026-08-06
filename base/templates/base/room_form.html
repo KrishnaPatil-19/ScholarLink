@@ -23,6 +23,16 @@
             {% csrf_token %}
             
             <div class="form__group">
+              <label for="room_space">Choose a Space</label>
+              <input type="text" name="space" id="room_space" placeholder="Enter or select a space" list="space-list">
+              <datalist id="space-list">
+                {% for space in spaces %}
+                  <option value="{{ space.name }}">{{ space.name }}</option>
+                {% endfor %}
+              </datalist>
+              <p class="form__hint">Spaces are like communities for related rooms.</p>
+            </div>
+            <div class="form__group">
               <label for="room_topic">Enter a Topic</label>
               <input type="text" name="topic" required list="topic-list">
               <datalist id="topic-list">

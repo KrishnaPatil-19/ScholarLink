@@ -42,7 +42,7 @@
   <div class="thread__details">{{ message.body }}</div>
 
   <div class="thread__reply{% if message.parent %} thread__reply--nested{% endif %}">
-    <form action="" method="POST">
+    <form action="" method="POST" data-login-action="reply to this message">
       {% csrf_token %}
       <input type="hidden" name="reply_to" value="{{ message.id }}" />
       <input name="body" placeholder="Reply to this {{ message.parent|yesno:'reply,message' }}..." />
@@ -50,7 +50,7 @@
     </form>
   </div>
 
-  {% for reply in message.replies.all %}
+  {% for reply in message.visible_replies %}
     {% include 'base/thread_item.html' with message=reply %}
   {% endfor %}
 </div>
