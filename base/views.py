@@ -346,3 +346,23 @@ def topicsPage(request):
 def activityPage(request):
     room_messages = Message.objects.filter(is_removed=False)
     return render(request, 'base/activity.html', {'room_messages': room_messages})
+
+def debug_allauth(request):
+    try:
+        output = Template(
+            "{% load socialaccount %}{% provider_login_url 'google' %}"
+        ).render(Context())
+
+        return HttpResponse(f"""
+        <h2>SUCCESS</h2>
+        <p>provider_login_url rendered successfully.</p>
+        <p><strong>Output:</strong> {output}</p>
+        """)
+
+    except Exception:
+        import traceback
+
+        return HttpResponse(
+            f"<pre>{traceback.format_exc()}</pre>",
+            content_type="text/html",
+        )

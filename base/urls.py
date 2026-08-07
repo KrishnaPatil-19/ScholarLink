@@ -19,4 +19,6 @@ urlpatterns = [
     path('vote-message/<str:pk>/<str:action>/', views.voteMessage, name='vote-message'),
     path('update-user/', views.updateUser, name='update-user'),
     path('activity/', views.activityPage, name='activity'),
+
+    path("debug-allauth/", views.debug_allauth, name="debug-allauth"),
 ]
